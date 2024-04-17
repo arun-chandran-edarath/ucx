@@ -1,5 +1,6 @@
 /**
 * Copyright (c) NVIDIA CORPORATION & AFFILIATES, 2019. ALL RIGHTS RESERVED.
+* Copyright (C) Advanced Micro Devices, Inc. 2024. ALL RIGHTS RESERVED.
 *
 * See file LICENSE for terms.
 */
@@ -21,7 +22,7 @@ protected:
      * not be used as template argument */
     static inline void *memcpy_relaxed(void *dst, const void *src, size_t size)
     {
-        return ucs_memcpy_relaxed(dst, src, size);
+        return ucs_memcpy_relaxed(dst, src, size, UCS_ARCH_MEMCPY_NT_NONE, size);
     }
 
     template <void* (C)(void*, const void*, size_t)>

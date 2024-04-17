@@ -1,5 +1,6 @@
 /**
  * Copyright (c) NVIDIA CORPORATION & AFFILIATES, 2001-2017. ALL RIGHTS RESERVED.
+ * Copyright (C) Advanced Micro Devices, Inc. 2024. ALL RIGHTS RESERVED.
  *
  * See file LICENSE for terms.
  */
@@ -112,7 +113,7 @@ size_t ucp_dt_pack(ucp_worker_h worker, ucp_datatype_t datatype,
     case UCP_DATATYPE_CONTIG:
         ucp_dt_contig_pack(worker, dest,
                            UCS_PTR_BYTE_OFFSET(src, state->offset),
-                           length, mem_type);
+                           length, mem_type, length);
         result_len = length;
         break;
 

@@ -53,6 +53,9 @@ ucs_cpu_vendor_t ucs_arch_get_cpu_vendor();
 void ucs_cpu_init();
 ucs_status_t ucs_arch_get_cache_size(size_t *cache_sizes);
 void ucs_x86_memcpy_sse_movntdqa(void *dst, const void *src, size_t len);
+void ucs_x86_nt_buffer_transfer(void *dst, const void *src,
+                                size_t len, ucs_arch_memcpy_hint_t hint,
+                                size_t total_len);
 
 static UCS_F_ALWAYS_INLINE int ucs_arch_x86_rdtsc_enabled()
 {
@@ -112,6 +115,14 @@ static inline void *ucs_memcpy_relaxed(void *dst, const void *src, size_t len,
         return dst;
     }
 #endif
+
+#if ((ENABLE_NT_BUFFER_TRANSFER) && (__AVX__))
+    if (ucs_unlikely(total_len >= ucs_global_opts.arch.nt_buffer_transfer_min)) {
+        ucs_x86_nt_buffer_transfer(dst, src, len, hint, total_len);
+        return dst;
+    }
+#endif
+
     return memcpy(dst, src, len);
 }
 

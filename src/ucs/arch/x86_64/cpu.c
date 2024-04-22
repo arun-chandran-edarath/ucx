@@ -588,7 +588,6 @@ static size_t ucs_cpu_memcpy_thresh(size_t user_val, size_t auto_val)
 }
 #endif
 
-#if ENABLE_NT_BUFFER_TRANSFER
 static size_t ucs_cpu_nt_bt_thresh_min(size_t user_val)
 {
     if (user_val != UCS_MEMUNITS_AUTO) {
@@ -610,7 +609,6 @@ static size_t ucs_cpu_nt_dest_thresh()
         return UCS_MEMUNITS_INF;
     }
 }
-#endif
 
 void ucs_cpu_init()
 {
@@ -622,11 +620,9 @@ void ucs_cpu_init()
         ucs_cpu_memcpy_thresh(ucs_global_opts.arch.builtin_memcpy_max,
                               ucs_cpu_builtin_memcpy[ucs_arch_get_cpu_vendor()].max);
 #endif
-#if ENABLE_NT_BUFFER_TRANSFER
     ucs_global_opts.arch.nt_buffer_transfer_min =
         ucs_cpu_nt_bt_thresh_min(ucs_global_opts.arch.nt_buffer_transfer_min);
     ucs_global_opts.arch.nt_dest_threshold = ucs_cpu_nt_dest_thresh();
-#endif
 }
 
 ucs_status_t ucs_arch_get_cache_size(size_t *cache_sizes)
@@ -736,14 +732,14 @@ ucs_status_t ucs_arch_get_cache_size(size_t *cache_sizes)
     return cache_count == UCS_CPU_CACHE_LAST ? UCS_OK : UCS_ERR_UNSUPPORTED;
 }
 
-#if ((ENABLE_NT_BUFFER_TRANSFER) && (__AVX__))
+#if __AVX__
 static UCS_F_ALWAYS_INLINE
 size_t ucs_x86_nt_dst_buffer_transfer(void *dst, const void *src, size_t len,
                                       unsigned int hint, size_t total_len)
 {
-    size_t offset;
-    __m256i y0, y1, y2, y3;
     const size_t switch_to_nt_store_size = 1464;
+    __m256i y0, y1, y2, y3;
+    size_t offset;
 
     ucs_nt_write_prefetch(dst);
     /* copy enough to make destination address 32 byte aligned */

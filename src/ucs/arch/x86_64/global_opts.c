@@ -1,5 +1,6 @@
 /**
 * Copyright (c) NVIDIA CORPORATION & AFFILIATES, 2019. ALL RIGHTS RESERVED.
+* Copyright (C) Advanced Micro Devices, Inc. 2024. ALL RIGHTS RESERVED.
 *
 * See file LICENSE for terms.
 */
@@ -25,21 +26,17 @@ ucs_config_field_t ucs_arch_global_opts_table[] = {
    ucs_offsetof(ucs_arch_global_opts_t, builtin_memcpy_max),
    UCS_CONFIG_TYPE_MEMUNITS},
 #endif
-#if ENABLE_NT_BUFFER_TRANSFER
   {"NT_BUFFER_TRANSFER_MIN", "auto",
    "Minimal threshold of buffer length for using nt-buffer-transfer.",
    ucs_offsetof(ucs_arch_global_opts_t, nt_buffer_transfer_min),
    UCS_CONFIG_TYPE_MEMUNITS},
-#endif
   {NULL}
 };
 
 
 void ucs_arch_print_memcpy_limits(ucs_arch_global_opts_t *config)
 {
-#if ENABLE_BUILTIN_MEMCPY || ENABLE_NT_BUFFER_TRANSFER
     char min_thresh_str[32];
-#endif
 
 #if ENABLE_BUILTIN_MEMCPY
     char max_thresh_str[32];
@@ -51,12 +48,9 @@ void ucs_arch_print_memcpy_limits(ucs_arch_global_opts_t *config)
            min_thresh_str, max_thresh_str);
 #endif
 
-#if ENABLE_NT_BUFFER_TRANSFER
     ucs_config_sprintf_memunits(min_thresh_str, sizeof(min_thresh_str),
                                 &config->nt_buffer_transfer_min, NULL);
     printf("# Using nt-buffer-transfer for sizes from %s\n",
            min_thresh_str);
-#endif
 }
-
 #endif

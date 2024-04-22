@@ -391,7 +391,8 @@ ucp_datatype_iter_next_pack(const ucp_datatype_iter_t *dt_iter,
                               dt_iter->type.iov.iov, length,
                               &next_iter->type.iov.iov_offset,
                               &next_iter->type.iov.iov_index,
-                              (ucs_memory_type_t)dt_iter->mem_info.type);
+                              (ucs_memory_type_t)dt_iter->mem_info.type,
+                              dt_iter->length);
         break;
     case UCP_DATATYPE_GENERIC:
         if (max_length != 0) {
@@ -456,7 +457,8 @@ ucp_datatype_iter_unpack(ucp_datatype_iter_t *dt_iter, ucp_worker_h worker,
                                            length,
                                            &dt_iter->type.iov.iov_offset,
                                            &dt_iter->type.iov.iov_index,
-                                           (ucs_memory_type_t)dt_iter->mem_info.type);
+                                           (ucs_memory_type_t)dt_iter->mem_info.type,
+                                           dt_iter->length);
         ucs_assert(unpacked_length <= length);
         dt_iter->offset += unpacked_length;
         status           = UCS_OK;

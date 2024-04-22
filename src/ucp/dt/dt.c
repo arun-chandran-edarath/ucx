@@ -120,7 +120,7 @@ size_t ucp_dt_pack(ucp_worker_h worker, ucp_datatype_t datatype,
     case UCP_DATATYPE_IOV:
         UCS_PROFILE_CALL_VOID(ucp_dt_iov_gather, worker, dest, src, length,
                               &state->dt.iov.iov_offset,
-                              &state->dt.iov.iovcnt_offset, mem_type);
+                              &state->dt.iov.iovcnt_offset, mem_type, length);
         result_len = length;
         break;
 

@@ -732,7 +732,7 @@ ucs_status_t ucs_arch_get_cache_size(size_t *cache_sizes)
     return cache_count == UCS_CPU_CACHE_LAST ? UCS_OK : UCS_ERR_UNSUPPORTED;
 }
 
-#if __AVX__
+#ifdef __AVX__
 static UCS_F_ALWAYS_INLINE
 size_t ucs_x86_nt_dst_buffer_transfer(void *dst, const void *src, size_t len,
                                       unsigned int hint, size_t total_len)

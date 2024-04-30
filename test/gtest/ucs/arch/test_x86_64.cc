@@ -64,6 +64,7 @@ protected:
         return result;
     }
 
+#ifdef __AVX__
     void nt_buffer_transfer_test(ucs_arch_memcpy_hint_t hint) {
         int i, j, result;
         char *test_window_src, *test_window_dst, *src, *dst, *dup;
@@ -113,6 +114,7 @@ protected:
         free(test_window_dst);
         free(dup);
     }
+#endif
 };
 
 UCS_TEST_SKIP_COND_F(test_arch, memcpy, RUNNING_ON_VALGRIND || !ucs::perf_retry_count) {
@@ -153,6 +155,7 @@ UCS_TEST_SKIP_COND_F(test_arch, memcpy, RUNNING_ON_VALGRIND || !ucs::perf_retry_
     }
 }
 
+#ifdef __AVX__
 UCS_TEST_F(test_arch, nt_buffer_transfer_nt_src) {
     nt_buffer_transfer_test(UCS_ARCH_MEMCPY_NT_SOURCE);
 }
@@ -166,4 +169,5 @@ UCS_TEST_F(test_arch, nt_buffer_transfer_nt_src_dst) {
     ucs_global_opts.arch.nt_dest_threshold = 0;
     nt_buffer_transfer_test(UCS_ARCH_MEMCPY_NT_SOURCE);
 }
+#endif
 #endif

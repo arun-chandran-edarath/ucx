@@ -64,14 +64,17 @@ protected:
         return result;
     }
 
-#ifdef __AVX__
     void nt_buffer_transfer_test(ucs_arch_memcpy_hint_t hint) {
+#ifndef __AVX__
+        UCS_TEST_SKIP_R("Built without AVX support");
+#else
         int i, j, result;
         char *test_window_src, *test_window_dst, *src, *dst, *dup;
-        size_t len, total_size, test_window_size, hole_size;
+        size_t len, total_size, test_window_size, hole_size, align;
 
+        align            = 256;
         test_window_size = 8 * 1024;
-        hole_size = 1024;
+        hole_size        = 1024;
 
         /*
          * allocate a total of 10k
@@ -79,9 +82,9 @@ protected:
          */
         total_size = test_window_size + (2 * hole_size);
 
-        posix_memalign((void **)&test_window_src, 256, total_size);
-        posix_memalign((void **)&test_window_dst, 256, total_size);
-        posix_memalign((void **)&dup, 256, total_size);
+        posix_memalign((void **)&test_window_src, align, total_size);
+        posix_memalign((void **)&test_window_dst, align, total_size);
+        posix_memalign((void **)&dup, align, total_size);
 
         /* Make a hole of 1k above and below for both src and dst */
         src = test_window_src + hole_size;
@@ -93,19 +96,19 @@ protected:
         memset(test_window_dst, 0x0, total_size);
 
         for (len = 0; len < test_window_size; len++) {
-            for (i = 0; i < 256; i++) {
-                for (j = 0; j < 256; j++) {
+            for (i = 0; i < align; i++) {
+                for (j = 0; j < align; j++) {
                     /* Perform the transfer */
                     ucs_x86_nt_buffer_transfer(dst + i, src + j, len, hint, len);
                     result = memcmp(src + j, dst + i, len);
-                    EXPECT_EQ(result, 0);
+                    EXPECT_EQ(0, result);
 
                     /* reset the copied region back to zero */
                     memset(dst + i, 0x0, len);
 
                     /* check for any modifications in the holes */
                     result = memcmp(test_window_dst, dup, total_size);
-                    EXPECT_EQ(result, 0);
+                    EXPECT_EQ(0, result);
                 }
             }
         }
@@ -113,8 +116,8 @@ protected:
         free(test_window_src);
         free(test_window_dst);
         free(dup);
-    }
 #endif
+    }
 };
 
 UCS_TEST_SKIP_COND_F(test_arch, memcpy, RUNNING_ON_VALGRIND || !ucs::perf_retry_count) {
@@ -155,7 +158,6 @@ UCS_TEST_SKIP_COND_F(test_arch, memcpy, RUNNING_ON_VALGRIND || !ucs::perf_retry_
     }
 }
 
-#ifdef __AVX__
 UCS_TEST_F(test_arch, nt_buffer_transfer_nt_src) {
     nt_buffer_transfer_test(UCS_ARCH_MEMCPY_NT_SOURCE);
 }
@@ -169,5 +171,4 @@ UCS_TEST_F(test_arch, nt_buffer_transfer_nt_src_dst) {
     ucs_global_opts.arch.nt_dest_threshold = 0;
     nt_buffer_transfer_test(UCS_ARCH_MEMCPY_NT_SOURCE);
 }
-#endif
 #endif

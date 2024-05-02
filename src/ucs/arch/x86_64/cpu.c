@@ -594,7 +594,7 @@ static size_t ucs_cpu_nt_bt_thresh_min(size_t user_val)
         return user_val;
     }
 
-    if ((ucs_arch_get_cpu_vendor() == UCS_CPU_VENDOR_AMD)) {
+    if (ucs_arch_get_cpu_vendor() == UCS_CPU_VENDOR_AMD) {
         return ((ucs_cpu_get_cache_size(UCS_CPU_CACHE_L3) * 3) / 4);
     } else {
         return UCS_MEMUNITS_INF;
@@ -603,7 +603,7 @@ static size_t ucs_cpu_nt_bt_thresh_min(size_t user_val)
 
 static size_t ucs_cpu_nt_dest_thresh()
 {
-    if ((ucs_arch_get_cpu_vendor() == UCS_CPU_VENDOR_AMD)) {
+    if (ucs_arch_get_cpu_vendor() == UCS_CPU_VENDOR_AMD) {
         return ((ucs_cpu_get_cache_size(UCS_CPU_CACHE_L3) * 29) / 32);
     } else {
         return UCS_MEMUNITS_INF;

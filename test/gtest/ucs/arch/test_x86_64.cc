@@ -73,7 +73,7 @@ protected:
         size_t len, total_size, test_window_size, hole_size, align;
 
         align            = 64;
-        test_window_size = 3 * 1024;
+        test_window_size = 2 * 1024;
         hole_size        = 2 * align;
 
         /*

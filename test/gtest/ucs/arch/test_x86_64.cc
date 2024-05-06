@@ -72,13 +72,13 @@ protected:
         char *test_window_src, *test_window_dst, *src, *dst, *dup;
         size_t len, total_size, test_window_size, hole_size, align;
 
-        align            = 256;
-        test_window_size = 8 * 1024;
-        hole_size        = 1024;
+        align            = 64;
+        test_window_size = 4 * 1024;
+        hole_size        = 2 * align;
 
         /*
-         * allocate a total of 10k
-         * leave 1k above and below the testing window.
+         * Allocate a hole above and below the test_window_size
+         * to check for writes beyond the designated area.
          */
         total_size = test_window_size + (2 * hole_size);
 
@@ -86,7 +86,6 @@ protected:
         posix_memalign((void **)&test_window_dst, align, total_size);
         posix_memalign((void **)&dup, align, total_size);
 
-        /* Make a hole of 1k above and below for both src and dst */
         src = test_window_src + hole_size;
         dst = test_window_dst + hole_size;
 

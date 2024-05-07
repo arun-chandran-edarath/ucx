@@ -1055,8 +1055,8 @@ run_release_mode_tests() {
 # Run nt_buffer_transfer tests
 #
 run_nt_buffer_transfer_tests() {
-    lscpu_output=$(lscpu)
-    if [[ $lscpu_output == *'AuthenticAMD'*  ]]; then
+    if lscpu | grep -q 'AuthenticAMD'
+    then
 	    build release --enable-gtest --enable-optimizations
 	    echo "==== Running nt_buffer_transfer tests ===="
 	    ./test/gtest/gtest --gtest_filter="test_arch.nt_buffer_transfer_*"

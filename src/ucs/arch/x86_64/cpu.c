@@ -733,6 +733,15 @@ ucs_status_t ucs_arch_get_cache_size(size_t *cache_sizes)
 }
 
 #ifdef __AVX__
+size_t transfer_count_array[100];
+size_t transfer_mul_array_524288[1024];
+size_t transfer_count_8232;
+size_t transfer_count_8240;
+size_t transfer_count_524288;
+size_t transfer_count_mulof_524288;
+size_t transfer_big_not_counted_mulof_524288;
+size_t transfer_path[8];
+
 static UCS_F_ALWAYS_INLINE
 size_t ucs_x86_nt_dst_buffer_transfer(void *dst, const void *src, size_t len,
                                       unsigned int hint, size_t total_len)
@@ -755,6 +764,7 @@ size_t ucs_x86_nt_dst_buffer_transfer(void *dst, const void *src, size_t len,
         len   -= offset;
 
         if (ucs_likely((size_t)UCS_PTR_BYTE_OFFSET(src, offset) & 0x1f)) {
+            transfer_path[0] += 1;
             /* src address is not aligned to 32 byte */
             while (len >= 128) {
                 y0 = _mm256_loadu_si256(UCS_PTR_BYTE_OFFSET(src, offset));
@@ -780,6 +790,7 @@ size_t ucs_x86_nt_dst_buffer_transfer(void *dst, const void *src, size_t len,
                 len    -= 128;
             }
         } else {
+            transfer_path[1] += 1;
             /* src address aligned to 32 byte */
             while (len >= 128) {
                 y0 = _mm256_load_si256(UCS_PTR_BYTE_OFFSET(src, offset));
@@ -822,6 +833,7 @@ size_t ucs_x86_nt_dst_buffer_transfer(void *dst, const void *src, size_t len,
         /* make the writes visible to the other core */
         ucs_memory_bus_store_fence();
     } else {
+        transfer_path[2] += 1;
         ucs_nt_write_prefetch(UCS_PTR_BYTE_OFFSET(dst, 128));
 
         offset        = 128 - ((uintptr_t)dst & 0x1f);
@@ -899,6 +911,7 @@ size_t ucs_x86_nt_src_buffer_transfer(void *dst, const void *src, size_t len)
     }
 
     if (ucs_likely((size_t)UCS_PTR_BYTE_OFFSET(src, offset) & 0x1f)) {
+        transfer_path[3] += 1;
         while (len >= 128) {
             y0 = _mm256_loadu_si256(UCS_PTR_BYTE_OFFSET(src, offset));
             y1 = _mm256_loadu_si256(UCS_PTR_BYTE_OFFSET(src, offset + 32));
@@ -924,6 +937,7 @@ size_t ucs_x86_nt_src_buffer_transfer(void *dst, const void *src, size_t len)
             len    -= 128;
         }
     } else {
+        transfer_path[4] += 1;
         while (len >= 128) {
             /* Can we use streaming loads on normal memory type? */
             y0 = _mm256_load_si256(UCS_PTR_BYTE_OFFSET(src, offset));
@@ -1027,8 +1041,146 @@ void ucs_x86_nt_buffer_transfer(void *dst, const void *src, size_t len,
                                 ucs_arch_memcpy_hint_t hint, size_t total_len)
 {
     size_t tail_bytes;
+    int index = -1;
+    static int eager_16464;
+
+    if (total_len < 1) {
+        index = 0;
+    } else if (total_len < 2) {
+        index = 1;
+    } else if (total_len < 4) {
+        index = 2;
+    } else if (total_len < 8) {
+        index = 3;
+    } else if (total_len < 16) {
+        index = 4;
+    } else if (total_len < 32) {
+        index = 5;
+    } else if (total_len < 64) {
+        index = 6;
+    } else if (total_len < 93) {
+        index = 7;
+    } else if (total_len < 129) {
+        index = 8;
+    } else if (total_len < 256) {
+        index = 9;
+    } else if (total_len < 512) {
+        index = 10;
+    } else if (total_len < 1024) {
+        index = 11;
+    } else if (total_len < 2048) {
+        index = 12;
+    } else if (total_len < 4096) {
+        index = 13;
+    } else if (total_len < 8249) {
+        index = 14;
+    } else if (total_len < 16384) {
+        if ((len != 8232) && (len != 8240)) {
+            index = 15;
+        }
+    } else if (total_len < 32768) {
+        if (total_len == 16464) {
+            if (eager_16464 == 0) {
+                index = 16;
+                eager_16464 = 1;
+            } else {
+                eager_16464 = 0;
+            }
+        }
+        if ((len != 8232) && (len != 8240)) {
+            index = 16;
+        }
+    } else if (total_len < 65536) {
+        if ((len != 8232) && (len != 8240)) {
+            index = 17;
+        }
+    } else if (total_len < 131072) {
+        if ((len != 8232) && (len != 8240)) {
+            index = 18;
+        }
+    } else if (total_len < 262144) {
+        if ((len != 8232) && (len != 8240)) {
+            index = 19;
+        }
+    } else if (total_len < 524288) {
+        index = 20;
+    } else if (total_len < 1 * 1048576) {
+        if (len != 524288) {
+            index = 21;
+        }
+    } else if (total_len < 2 * 1048576) {
+        if (len != 524288) {
+            index = 22;
+        }
+    } else if (total_len < 4 * 1048576) {
+        if (len != 524288) {
+            index = 23;
+        }
+    } else if (total_len < 8 * 1048576) {
+        if (len != 524288) {
+            index = 24;
+        }
+    } else if (total_len < 16 * 1048576) {
+        if (len != 524288) {
+            index = 25;
+        }
+    } else if (total_len < 32 * 1048576) {
+        if (len != 524288) {
+            index = 26;
+        }
+    } else if (total_len < 64 * 1048576) {
+        if (len != 524288) {
+            index = 27;
+        }
+    } else if (total_len < 128 * 1048576) {
+        if (len != 524288) {
+            index = 28;
+        }
+    } else if (total_len < 256 * 1048576) {
+        if (len != 524288) {
+            index = 29;
+        }
+    } else if (total_len < 512 * 1048576) {
+        if (len != 524288) {
+            index = 30;
+        }
+    } else {
+        if (len != 524288) {
+            index = 31;
+        }
+    }
+
+    if (index != -1) {
+        transfer_count_array[index] = transfer_count_array[index] + 1;
+    }
+
+    if (total_len < 262144) {
+        if (len == 8232) {
+            transfer_count_8232 += 1;
+        }
+
+        if (len == 8240) {
+            transfer_count_8240 += 1;
+        }
+    } else {
+        if (len == 524288) {
+            transfer_count_524288 += 1;
+        }
+
+        if (total_len % 524288 == 0) {
+            index = total_len / 524288;
+
+            if (index < 1024) {
+                transfer_mul_array_524288[index] += 1;
+            } else {
+                transfer_big_not_counted_mulof_524288 += 1;
+            }
+            transfer_count_mulof_524288 += 1;
+        }
+    }
 
     if (ucs_likely(len <= 128)) {
+        transfer_path[5] += 1;
         goto copy_bytes_le_128;
     }
 
@@ -1042,6 +1194,7 @@ void ucs_x86_nt_buffer_transfer(void *dst, const void *src, size_t len,
     } else if (hint & UCS_ARCH_MEMCPY_NT_SOURCE) {
         tail_bytes = ucs_x86_nt_src_buffer_transfer(dst, src, len);
     } else {
+        transfer_path[6] += 1;
         memcpy(dst, src, len);
         tail_bytes = 0;
     }
@@ -1049,6 +1202,8 @@ void ucs_x86_nt_buffer_transfer(void *dst, const void *src, size_t len,
     dst = UCS_PTR_BYTE_OFFSET(dst, len - tail_bytes);
     src = UCS_PTR_BYTE_OFFSET(src, len - tail_bytes);
     len = tail_bytes;
+
+    transfer_path[7] += 1;
 
 copy_bytes_le_128:
     ucs_x86_copy_bytes_le_128(dst, src, len);

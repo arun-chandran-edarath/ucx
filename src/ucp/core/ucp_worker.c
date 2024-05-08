@@ -2927,8 +2927,19 @@ static void ucp_worker_destroy_eps(ucp_worker_h worker,
     }
 }
 
+extern size_t transfer_count_array[];
+extern size_t transfer_mul_array_524288[];
+extern size_t transfer_path[];
+extern size_t transfer_count_8232;
+extern size_t transfer_count_8240;
+extern size_t transfer_count_524288;
+extern size_t transfer_count_mulof_524288;
+extern size_t transfer_big_not_counted_mulof_524288;
+
 void ucp_worker_destroy(ucp_worker_h worker)
 {
+    int index, total_cnt_index;
+    size_t total_len, transfer_cnt;
     ucs_debug("destroy worker %p", worker);
 
     UCS_ASYNC_BLOCK(&worker->async);
@@ -2944,6 +2955,57 @@ void ucp_worker_destroy(ucp_worker_h worker)
      * which further set iface->am[UCP_AM_ID_WIREUP].
      */
     ucp_worker_remove_am_handlers(worker);
+
+    for (index = 0; index < 1023; index++) {
+        if (transfer_mul_array_524288[index]) {
+            total_len = index * 524288;
+            transfer_cnt = transfer_mul_array_524288[index] / index;
+            printf("nt_buffer_transfer, mul_524288: %s id:%d size:%ld cnt:%ld\n", worker->address_name, index, total_len, transfer_cnt);
+
+            if (total_len < 1 * 1048576) {
+                total_cnt_index = 21;
+            } else if (total_len < 2 * 1048576) {
+                total_cnt_index = 22;
+            } else if (total_len < 4 * 1048576) {
+                total_cnt_index = 23;
+            } else if (total_len < 8 * 1048576) {
+                total_cnt_index = 24;
+            } else if (total_len < 16 * 1048576) {
+                total_cnt_index = 25;
+            } else if (total_len < 32 * 1048576) {
+                total_cnt_index = 26;
+            } else if (total_len < 64 * 1048576) {
+                total_cnt_index = 27;
+            } else {
+                total_cnt_index = 28;
+            }
+
+            transfer_count_array[total_cnt_index] += transfer_cnt;
+        }
+
+    }
+
+    for (index = 0; index < 100; index++) {
+        if (transfer_count_array[index]) {
+            printf("nt_buffer_transfer, Total_len %s id:%d cnt:%ld\n", worker->address_name, index, transfer_count_array[index]);
+        }
+    }
+
+    printf("nt_buffer_transfer, Total_8232 %s cnt:%ld\n", worker->address_name, transfer_count_8232);
+    printf("nt_buffer_transfer, Total_8240 %s cnt:%ld\n", worker->address_name, transfer_count_8240);
+    printf("nt_buffer_transfer, Total_524288 %s cnt:%ld\n", worker->address_name, transfer_count_524288);
+    printf("nt_buffer_transfer, Total_mulof_524288 %s cnt:%ld\n", worker->address_name, transfer_count_mulof_524288);
+    printf("nt_buffer_transfer, Total_big_not_counted_mulof_524288 %s cnt:%ld\n",
+            worker->address_name, transfer_big_not_counted_mulof_524288);
+
+    printf("nt_buffer_transfer, Transfer_path:NTDST unaligned src, %s cnt:%ld\n", worker->address_name, transfer_path[0]);
+    printf("nt_buffer_transfer, Transfer_path:NTDST aligned src, %s cnt:%ld\n", worker->address_name, transfer_path[1]);
+    printf("nt_buffer_transfer, Transfer_path:NTDST NT prefetch, %s cnt:%ld\n", worker->address_name, transfer_path[2]);
+    printf("nt_buffer_transfer, Transfer_path:NTSRC unaligned dst, %s cnt:%ld\n", worker->address_name, transfer_path[3]);
+    printf("nt_buffer_transfer, Transfer_path:NTSRC aligned dst, %s cnt:%ld\n", worker->address_name, transfer_path[4]);
+    printf("nt_buffer_transfer, Transfer_path:copy_bytes_le_128, %s cnt:%ld\n", worker->address_name, transfer_path[5]);
+    printf("nt_buffer_transfer, Transfer_path:memcpy, %s cnt:%ld\n", worker->address_name, transfer_path[6]);
+    printf("nt_buffer_transfer, Transfer_path:Total %s cnt:%ld\n", worker->address_name, transfer_path[7]);
 
     if (worker->flush_ops_count != 0) {
         ucs_warn("worker %p: %u pending operations were not flushed", worker,

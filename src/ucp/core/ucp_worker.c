@@ -2875,8 +2875,32 @@ static void ucp_worker_destroy_eps(ucp_worker_h worker,
     }
 }
 
+extern size_t transfer_count_array[];
+extern size_t transfer_byte_array[];
+extern size_t transfer_mul_array_524288[];
+extern size_t transfer_path[];
+extern size_t total_transfer_len;
+extern size_t why_this_big_multi_frag;
+extern size_t transfer_count_multi_frag;
+extern size_t multi_frag_byte_cnt;
+extern size_t single_frag_byte_cnt;
+extern size_t cico_byte_cnt;
+extern size_t scopy_byte_cnt;
+extern size_t nt_src_byte_cnt;
+extern size_t nt_dst_byte_cnt;
+extern size_t nt_src_dst_byte_cnt;
+extern size_t nt_none_byte_cnt;
+extern size_t transfer_count_524288;
+extern size_t transfer_count_mulof_524288;
+extern size_t transfer_big_not_counted_mulof_524288;
+
 void ucp_worker_destroy(ucp_worker_h worker)
 {
+    int index, total_cnt_index;
+    size_t total_len, transfer_cnt;
+    FILE *file;
+    char filename[100];
+
     ucs_debug("destroy worker %p", worker);
 
     UCS_ASYNC_BLOCK(&worker->async);
@@ -2892,6 +2916,77 @@ void ucp_worker_destroy(ucp_worker_h worker)
      * which further set iface->am[UCP_AM_ID_WIREUP].
      */
     ucp_worker_remove_am_handlers(worker);
+
+    sprintf(filename, "ntbtsizes_%s", worker->address_name);
+    file = fopen(filename, "w");
+
+    for (index = 0; index < 1023; index++) {
+        if (transfer_mul_array_524288[index]) {
+            total_len = index * 524288;
+            transfer_cnt = transfer_mul_array_524288[index] / index;
+            fprintf(file, "mul_524288, id:%d size:%ld cnt:%ld\n", index, total_len, transfer_cnt);
+
+            if (total_len < 1 * 1048576) {
+                total_cnt_index = 21;
+            } else if (total_len < 2 * 1048576) {
+                total_cnt_index = 22;
+            } else if (total_len < 4 * 1048576) {
+                total_cnt_index = 23;
+            } else if (total_len < 8 * 1048576) {
+                total_cnt_index = 24;
+            } else if (total_len < 16 * 1048576) {
+                total_cnt_index = 25;
+            } else if (total_len < 32 * 1048576) {
+                total_cnt_index = 26;
+            } else if (total_len < 64 * 1048576) {
+                total_cnt_index = 27;
+            } else if (total_len < 128 * 1048576) {
+                total_cnt_index = 28;
+            } else if (total_len < 256 * 1048576) {
+                total_cnt_index = 29;
+            } else if (total_len < 512 * 1048576) {
+                total_cnt_index = 30;
+            } else {
+                total_cnt_index = 31;
+            }
+
+            transfer_count_array[total_cnt_index] += transfer_cnt;
+        }
+
+    }
+
+    fprintf(file, "Total_transfer_len,bytes:%ld\n", total_transfer_len);
+
+    for (index = 0; index < 100; index++) {
+        if (transfer_count_array[index]) {
+            fprintf(file, "Total_len,id:%d,cnt:%ld,bytes:%ld\n", index,
+                    transfer_count_array[index], transfer_byte_array[index]);
+        }
+    }
+
+    fprintf(file, "Total_multi_frag,cnt:%ld,bytes:%ld\n", transfer_count_multi_frag, multi_frag_byte_cnt);
+    fprintf(file, "single_frag_byte_cnt,cnt:%ld\n", single_frag_byte_cnt);
+    fprintf(file, "cico_byte_cnt,cnt:%ld\n", cico_byte_cnt);
+    fprintf(file, "scopy_byte_cnt,cnt:%ld\n", scopy_byte_cnt);
+    fprintf(file, "Total_why_this_big_multi_frag,cnt:%ld\n", why_this_big_multi_frag);
+    fprintf(file, "Total_mulof_524288,cnt:%ld\n", transfer_count_mulof_524288);
+    fprintf(file, "Total_524288_segments,cnt:%ld\n", transfer_count_524288);
+    fprintf(file, "Total_big_not_counted_mulof_524288,cnt:%ld\n", transfer_big_not_counted_mulof_524288);
+    fprintf(file, "NTDST unaligned src,bytes:%ld\n", transfer_path[0]);
+    fprintf(file, "NTDST aligned src,bytes:%ld\n", transfer_path[1]);
+    fprintf(file, "NTDST NT prefetch,bytes:%ld\n", transfer_path[2]);
+    fprintf(file, "NTSRC unaligned src,bytes:%ld\n", transfer_path[3]);
+    fprintf(file, "NTSRC aligned src,bytes:%ld\n", transfer_path[4]);
+    fprintf(file, "copy_bytes_le_128,bytes:%ld\n", transfer_path[5]);
+    fprintf(file, "copy_bytes_le_128_tail,bytes:%ld\n", transfer_path[6]);
+    fprintf(file, "NTALL unaligned src,bytes:%ld\n", transfer_path[7]);
+    fprintf(file, "NTALL aligned src,bytes:%ld\n", transfer_path[8]);
+    fprintf(file, "nt_src_byte_cnt,bytes:%ld\n", nt_src_byte_cnt);
+    fprintf(file, "nt_dst_byte_cnt,bytes:%ld\n", nt_dst_byte_cnt);
+    fprintf(file, "nt_src_dst_byte_cnt,bytes:%ld\n", nt_src_dst_byte_cnt);
+    fprintf(file, "nt_none_byte_cnt,bytes:%ld\n", nt_none_byte_cnt);
+
+    fclose(file);
 
     if (worker->flush_ops_count != 0) {
         ucs_warn("worker %p: %u pending operations were not flushed", worker,

@@ -643,6 +643,12 @@ static size_t ucs_cpu_nt_bt_thresh_min(size_t user_val)
     }
 }
 
+/*
+ * The caller hint is used for nt_buffer_transfer_min <= total_len <=
+ * nt_dest_threshold. Matching AMD defaults make NT_DEST the automatic choice
+ * above 3/4 L3, a conservative threshold for limiting cache pollution from
+ * large copies.
+ */
 static size_t ucs_cpu_nt_dest_thresh()
 {
     if (ucs_arch_get_cpu_vendor() == UCS_CPU_VENDOR_AMD) {
@@ -798,11 +804,14 @@ void ucs_x86_nt_buffer_transfer(void *dst, const void *src, size_t len,
     }
 
     /*
-     * NT_SOURCE (copy-out) path, taken for the UCS_ARCH_MEMCPY_NT_SOURCE
-     * hint. We do not non-temporally prefetch the source: an NT prefetch on
-     * a source line still in the Modified state can trigger a write-back, so
-     * a copy-out would generate writes for both the source (evicted) and the
-     * destination and double the receiver's memory-write pressure.  The
+     * Copy-out callers still pass UCS_ARCH_MEMCPY_NT_SOURCE. The dispatcher
+     * does not check that hint explicitly: when UCS_ARCH_MEMCPY_NT_DEST is
+     * not selected, the source hint falls through to this path.
+     *
+     * We do not non-temporally prefetch the source: an NT prefetch on a source
+     * line still in the Modified state can trigger a write-back, so a copy-out
+     * would generate writes for both the source (evicted) and the destination,
+     * and double the receiver's memory-write pressure. The
      * UCS_ARCH_MEMCPY_NT_SOURCE hint is therefore serviced as a plain
      * cache-respecting copy-out with a vectorized implementation and,
      * when built-in memcpy is enabled, an ERMS implementation:

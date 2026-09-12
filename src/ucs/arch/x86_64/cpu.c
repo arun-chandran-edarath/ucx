@@ -786,6 +786,11 @@ ucs_status_t ucs_arch_get_cache_size(size_t *cache_sizes)
 void ucs_x86_nt_buffer_transfer(void *dst, const void *src, size_t len,
                                 ucs_arch_memcpy_hint_t hint, size_t total_len)
 {
+    /*
+     * Use memcpy below the 3072-byte fragment crossover to avoid vector and NT
+     * setup overhead. This floor applies independently of
+     * NT_BUFFER_TRANSFER_MIN.
+     */
     const size_t min_nt_buffer_transfer_size = 3072;
 
     if (ucs_likely(len < min_nt_buffer_transfer_size)) {
